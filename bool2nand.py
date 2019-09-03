@@ -4,10 +4,10 @@ github.com/vrmiguel/Bool2NAND
 Ternary boolean expression into NANDs
 """
 
+import re
 from sympy import pprint
 from sympy.abc import A, B, C
-from sympy.logic.boolalg import And, Not, Or
-from sympy.logic.boolalg import to_cnf
+from sympy.logic.boolalg import And, Not, Or, to_cnf
 
 '''
 Tabela 1
@@ -35,7 +35,46 @@ def extract_boolean_expression(truth_table: str):
     h = (Not(A) & Not(B) & Not(C))    if truth_table[7] == '1' else False
     return(a | b | c | d | e | f | g | h)
 
+    ''' Identifica se NOTs estão na expressão e tenta os converter para NANDs
+        Parte do princípio de que not(x) = nand(x,x)
+    ''' 
+def convert_nots_to_nand(subexpr:str):    
+    if(subexpr[0] == '~'):
+        expr = '(' + subexpr[1] + '⊼' + subexpr[1] + ')'
+        subexpr.pop(0)
+        subexpr.pop(0)
+        subexpr.insert(0, expr)
+        
+    try:
+        z = subexpr.index('~')
+    except ValueError:  # Não existe outro NOT na string
+        return subexpr
+    else:
+        expr = '(' + subexpr[z+1] + '⊼' + subexpr[z+1] + ')'
+        subexpr.pop(z)
+        subexpr.pop(z)
+        subexpr.insert(z, expr)
+        return(subexpr)
+    
+
+    # Converte subtermos da expressão em uma lista. Ex.: "A | B | C" -> ['A', '|', 'B', '|', 'C']
+def get_terms(subexpr: str):
+    subexpr = re.findall(".|.", subexpr)          #Obtém todos os termos entre OR  
+    return([x for x in subexpr if x != ' ' and x != '(' and x != ')']) # Filtra espaços e parênteses 
+
+    # Converte a expressão em FNC em uma expressão de NANDs 
+def convert_to_nand(cnf: str):
+    splitcnf = cnf.split("&") # Divide a string de forma normal conjuntiva em substrings somente com operações OR
+    splitcnf = [x.strip() for x in splitcnf] # Remove espaços no começo e fim de cada substring
+    terms_list = [get_terms(x) for x in splitcnf]
+    print('terms_list_inicial: ', terms_list)
+    terms_list = [convert_nots_to_nand(x) for x in terms_list]
+    [print(x) for x in terms_list]
+    
+    #print(terms_list)    
+
 if __name__ == '__main__':
+        # Loop lê string de tabela-verdade enquanto o input for incorreto
     while(True):
         truth_table = input("Digite os oito bits relativos à tabela-verdade da expressão: ")
         for i in truth_table:
@@ -46,16 +85,15 @@ if __name__ == '__main__':
             print("Erro: A string dada tem " + str(len(truth_table)) + " caracteres, onde o esperado são 8")
             continue
         break
-    expr = extract_boolean_expression(truth_table)
-    cnf = to_cnf(expr)
+    
+    expr = extract_boolean_expression(truth_table) # Extrai expressão booleana da tabela-verdade
+    cnf = to_cnf(expr, simplify=True) # e a converte para a forma normal conjuntiva em seus termos mais simples
+    
+    '''
     print("A tabela dada corresponde à seguinte expressão:")
     pprint(expr)
     print('\n')
     print("Em forma normal conjuntiva, a expressão corresponde a:")
     pprint(cnf)
-    
-    strcnf = str(cnf)
-    
-    pprint(cnf)
-    
-    
+    '''
+    convert_to_nand(str(cnf)) # Transforma a forma normal conjuntiva em string    
