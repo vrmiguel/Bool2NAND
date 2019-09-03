@@ -2,7 +2,10 @@
 """
 github.com/vrmiguel/Bool2NAND
 Ternary boolean expression into NANDs
+TODO: Verificar se convert_ors_to_nand nunca trabalhará com uma expressão
+com len != 3.
 """
+
 
 import re
 from sympy import pprint
@@ -23,7 +26,8 @@ F F F i  -- A'B'C'
 '''
 
 
-    # Adquire a expressão booleana de acordo com a Tab. 1s
+    # Adquire a expressão booleana de acordo com a Tabela 1
+    # Exemplo: Uma entrada "10000000" teria saída (A & B & C)
 def extract_boolean_expression(truth_table: str):
     a = (A & B & C)                   if truth_table[0] == '1' else False
     b = (A & B & Not(C))              if truth_table[1] == '1' else False
@@ -35,9 +39,22 @@ def extract_boolean_expression(truth_table: str):
     h = (Not(A) & Not(B) & Not(C))    if truth_table[7] == '1' else False
     return(a | b | c | d | e | f | g | h)
 
-    ''' Identifica se NOTs estão na expressão e tenta os converter para NANDs
-        Parte do princípio de que not(x) = nand(x,x)
     ''' 
+        Converte ORs em NAND
+        Parte do princípio de que or(a, b) = ((a⊼a)⊼(b⊼b)) '''
+def convert_ors_to_nand(subexpr: str):
+    if(len(subexpr) != 3):
+        print("Erro fatal em convert_ors_to_nand()")
+        exit(0)
+    else:
+        expr1 = '(' + subexpr[0] + " ⊼ " + subexpr[0] + ')'  # expr = (a⊼a)
+        expr2 = '(' + subexpr[2] + " ⊼ " + subexpr[2] + ')'  # expr = (b⊼b)
+        return '(' + expr1 + " ⊼ " + expr2 + ')'
+    
+    
+
+    ''' Identifica se NOTs estão na expressão e tenta os converter para NANDs
+        Parte do princípio de que not(x) = nand(x,x) ''' 
 def convert_nots_to_nand(subexpr:str):    
     if(subexpr[0] == '~'):
         expr = '(' + subexpr[1] + '⊼' + subexpr[1] + ')'
@@ -47,16 +64,15 @@ def convert_nots_to_nand(subexpr:str):
         
     try:
         z = subexpr.index('~')
-    except ValueError:  # Não existe outro NOT na string
+    except ValueError:  # Caso não exista outro NOT na string
         return subexpr
-    else:
+    else:       # Caso exista outra, converta-a em NANDs
         expr = '(' + subexpr[z+1] + '⊼' + subexpr[z+1] + ')'
         subexpr.pop(z)
         subexpr.pop(z)
         subexpr.insert(z, expr)
         return(subexpr)
     
-
     # Converte subtermos da expressão em uma lista. Ex.: "A | B | C" -> ['A', '|', 'B', '|', 'C']
 def get_terms(subexpr: str):
     subexpr = re.findall(".|.", subexpr)          #Obtém todos os termos entre OR  
@@ -67,9 +83,11 @@ def convert_to_nand(cnf: str):
     splitcnf = cnf.split("&") # Divide a string de forma normal conjuntiva em substrings somente com operações OR
     splitcnf = [x.strip() for x in splitcnf] # Remove espaços no começo e fim de cada substring
     terms_list = [get_terms(x) for x in splitcnf]
-    print('terms_list_inicial: ', terms_list)
+    print('Original em termos: ', terms_list)
     terms_list = [convert_nots_to_nand(x) for x in terms_list]
-    [print(x) for x in terms_list]
+    print('NOTs convertidas: ', terms_list)
+    terms_list = [convert_ors_to_nand(x) for x in terms_list]
+    print('ORs convertidas: ', terms_list)
     
     #print(terms_list)    
 
