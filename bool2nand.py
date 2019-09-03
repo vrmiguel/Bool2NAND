@@ -39,9 +39,25 @@ def extract_boolean_expression(truth_table: str):
     h = (Not(A) & Not(B) & Not(C))    if truth_table[7] == '1' else False
     return(a | b | c | d | e | f | g | h)
 
-    ''' 
-        Converte ORs em NAND
-        Parte do princípio de que or(a, b) = ((a⊼a)⊼(b⊼b)) '''
+    ''' Converte ANDs em NANDs
+        Parte do princípio de que and(a, b) = ((a⊼b)⊼(a⊼b)) 
+        Para verificação da lógica deste método, verifique a função concatenar_pares(), contida
+        no repositório '''
+def convert_and_to_nand(expr: str):
+    final = ['('+expr[i]+'⊼'+expr[i+1] +')⊼(' + expr[i] +  '⊼' + expr[i+1]+')' for i in range(0, len(expr)-1, 2)]
+        # A expressão acima é de difícil compreensão mas faz a substituição de
+        # and(a, b) = ((a⊼b)⊼(a⊼b)) para cada dupla de subexpressões
+    ''' TODO
+    if len(expr) % 2 != 0:  # Se a quantidade de expressões for ímpar, faltará um termo a ser adicionado
+        final += '⊼ (' + expr[i] +  '⊼' + expr[i+1]+')'
+        '''
+        
+    return final
+    
+    ''' Converte ORs em NANDs
+        Parte do princípio de que or(a, b) = ((a⊼a)⊼(b⊼b))
+        Exemplo:    Entrada = ['B', '|', 'C']
+                    Saída = ((B ⊼ B) ⊼ (C ⊼ C))'''
 def convert_ors_to_nand(subexpr: str):
     if(len(subexpr) != 3):
         print("Erro fatal em convert_ors_to_nand()")
@@ -50,8 +66,6 @@ def convert_ors_to_nand(subexpr: str):
         expr1 = '(' + subexpr[0] + " ⊼ " + subexpr[0] + ')'  # expr = (a⊼a)
         expr2 = '(' + subexpr[2] + " ⊼ " + subexpr[2] + ')'  # expr = (b⊼b)
         return '(' + expr1 + " ⊼ " + expr2 + ')'
-    
-    
 
     ''' Identifica se NOTs estão na expressão e tenta os converter para NANDs
         Parte do princípio de que not(x) = nand(x,x) ''' 
@@ -78,18 +92,18 @@ def get_terms(subexpr: str):
     subexpr = re.findall(".|.", subexpr)          #Obtém todos os termos entre OR  
     return([x for x in subexpr if x != ' ' and x != '(' and x != ')']) # Filtra espaços e parênteses 
 
-    # Converte a expressão em FNC em uma expressão de NANDs 
+    # Método façade para conversão de expressão em FNC em uma expressão de NANDs
 def convert_to_nand(cnf: str):
     splitcnf = cnf.split("&") # Divide a string de forma normal conjuntiva em substrings somente com operações OR
     splitcnf = [x.strip() for x in splitcnf] # Remove espaços no começo e fim de cada substring
     terms_list = [get_terms(x) for x in splitcnf]
-    print('Original em termos: ', terms_list)
+    #print('Original em termos: ', terms_list)
     terms_list = [convert_nots_to_nand(x) for x in terms_list]
-    print('NOTs convertidas: ', terms_list)
+    #print('NOTs convertidas: ', terms_list)
     terms_list = [convert_ors_to_nand(x) for x in terms_list]
-    print('ORs convertidas: ', terms_list)
-    
-    #print(terms_list)    
+    #print('ORs convertidas: ', terms_list)
+    final_expr = convert_and_to_nand(terms_list)
+    print("A expressão final obtida foi: ", final_expr)    
 
 if __name__ == '__main__':
         # Loop lê string de tabela-verdade enquanto o input for incorreto
@@ -107,11 +121,12 @@ if __name__ == '__main__':
     expr = extract_boolean_expression(truth_table) # Extrai expressão booleana da tabela-verdade
     cnf = to_cnf(expr, simplify=True) # e a converte para a forma normal conjuntiva em seus termos mais simples
     
-    '''
+    
     print("A tabela dada corresponde à seguinte expressão:")
     pprint(expr)
     print('\n')
     print("Em forma normal conjuntiva, a expressão corresponde a:")
     pprint(cnf)
-    '''
+    print('\n')
+    
     convert_to_nand(str(cnf)) # Transforma a forma normal conjuntiva em string    
